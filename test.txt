@@ -1,0 +1,67 @@
+import os
+import time
+import jieba
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
+
+# ========== 用户配置 ==========
+TXT_PATH = r"D:\QQChat\chat.txt"     # 你的聊天记录文件路径（记得改成自己的）
+FONT_PATH = r"C:\Windows\Fonts\msyh.ttc"  # 中文字体路径
+CHECK_INTERVAL = 600  # 检查间隔（单位：秒）→ 600秒 = 10分钟
+# =============================
+
+# 记录上次文件修改时间
+last_modified = None
+
+def generate_wordcloud(text):
+    """根据文本生成词云"""
+    text_cut = " ".join(jieba.cut(text))
+    wc = WordCloud(
+        font_path=FONT_PATH,
+        background_color='white',
+        width=800,
+        height=400
+    ).generate(text_cut)
+    
+    wc.to_file("wordcloud.png")  # 保存词云图
+    plt.imshow(wc, interpolation='bilinear')
+    plt.axis('off')
+    plt.show()
+    print("✅ 词云已更新并保存为 wordcloud.png\n")
+
+def read_chat_file(path):
+    """读取聊天记录文件"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        print(f"❌ 读取文件失败: {e}")
+        return ""
+
+def monitor_chat():
+    """定期监控文件变化"""
+    global last_modified
+
+    print(f"🔍 正在监控聊天文件: {TXT_PATH}")
+    while True:
+        if not os.path.exists(TXT_PATH):
+            print("⚠️ 文件不存在，等待创建...")
+            time.sleep(CHECK_INTERVAL)
+            continue
+
+        current_modified = os.path.getmtime(TXT_PATH)
+        if last_modified is None or current_modified != last_modified:
+            print("📂 检测到聊天记录更新，正在生成词云...")
+            text = read_chat_file(TXT_PATH)
+            if text.strip():
+                generate_wordcloud(text)
+            else:
+                print("⚠️ 聊天记录为空，跳过。")
+            last_modified = current_modified
+        else:
+            print("⏳ 无变化，等待下一次检查。")
+
+        time.sleep(CHECK_INTERVAL)
+
+if __name__ == "__main__":
+    monitor_chat()
